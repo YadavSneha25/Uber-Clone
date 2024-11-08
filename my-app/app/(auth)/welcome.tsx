@@ -1,14 +1,20 @@
-import React, { useState, useRef } from 'react'; 
+import React, { useState, useRef } from 'react';
 import { Text, TouchableOpacity, View, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import Swiper from 'react-native-swiper';  // Ensure it's from 'react-native-swiper'
-import { onboarding } from '../../constants'; // Make sure the path is correct
+import Swiper from 'react-native-swiper';
+import { onboarding } from '../../constants'; 
+import { Image } from 'react-native';
+import CustomButtons from '../../components/CustomButtons';  
 
 const Onboarding = () => {
-  const swiperRef = useRef<Swiper | null>(null);  // Correctly typed ref for TypeScript
+  const swiperRef = useRef<Swiper | null>(null); 
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
+
+  const handleNextPress = () => {
+    
+    console.log('Next button pressed');
+  };
 
   return (
     <View style={styles.container}>
@@ -28,13 +34,26 @@ const Onboarding = () => {
         activeDot={<View style={styles.activeDot} />}
         onIndexChanged={(index) => setActiveIndex(index)}
       >
-        {/* Map through the onboarding data */}
         {onboarding.map((item) => (
           <View style={styles.slide} key={item.id}>
-            <Text>{item.title}</Text>
-            <Text>{item.description}</Text>
-            {/* If you have an image, you can render it here */}
-            {/* {item.image && <Image source={{uri: item.image}} />} */}
+            <Image
+              source={item.image}
+              style={{ width: '100%', height: 300 }}
+              resizeMode="contain"
+            />
+            <View style={styles.titleContainer}>
+              <Text style={styles.titleText}>{item.title}</Text>
+            </View>
+
+            <View style={styles.titleContainer}>
+              <Text style={styles.decriptionText}>{item.description}</Text>
+            </View>
+
+            <CustomButtons
+              title="Next"
+              onPress={handleNextPress}  
+              style={{ width: '92%', marginTop: 10 }}  
+            />
           </View>
         ))}
       </Swiper>
@@ -42,7 +61,6 @@ const Onboarding = () => {
   );
 };
 
-// Styles (using StyleSheet to avoid className in React Native)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -59,7 +77,7 @@ const styles = StyleSheet.create({
   skipText: {
     color: 'black',
     fontSize: 16,
-    fontFamily: 'Jakarta-Bold', // Adjust based on your font
+    fontFamily: 'Jakarta-Bold',
   },
   dot: {
     width: 32,
@@ -79,6 +97,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flex: 1,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 10,
+  },
+  titleText: {
+    color: 'black',
+    fontSize: 15,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginHorizontal: 10,
+  },
+  decriptionText: {
+    color: 'black',
+    fontSize: 15,
+    textAlign: 'center',
+    marginHorizontal: 10,
   },
 });
 

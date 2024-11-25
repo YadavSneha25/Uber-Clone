@@ -1,19 +1,22 @@
 import React, { useState, useRef } from 'react';
-import { Text, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Text, TouchableOpacity, View, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import Swiper from 'react-native-swiper';
 import { onboarding } from '../../constants'; 
-import { Image } from 'react-native';
 import CustomButtons from '../../components/CustomButtons';  
 
 const Onboarding = () => {
   const swiperRef = useRef<Swiper | null>(null); 
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
+  const isLastSlide = activeIndex === onboarding.length - 1;
 
   const handleNextPress = () => {
-    
-    console.log('Next button pressed');
+    if (isLastSlide) {
+      router.replace('/(auth)/sign-up');
+    } else {
+      swiperRef.current?.scrollBy(1);
+    }
   };
 
   return (
@@ -46,12 +49,12 @@ const Onboarding = () => {
             </View>
 
             <View style={styles.titleContainer}>
-              <Text style={styles.decriptionText}>{item.description}</Text>
+              <Text style={styles.descriptionText}>{item.description}</Text>
             </View>
 
             <CustomButtons
-              title="Next"
-              onPress={handleNextPress}  
+              title={isLastSlide ? "Get Started" : "Next"}
+              onPress={handleNextPress}
               style={{ width: '92%', marginTop: 10 }}  
             />
           </View>
@@ -112,7 +115,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 10,
   },
-  decriptionText: {
+  descriptionText: {
     color: 'black',
     fontSize: 15,
     textAlign: 'center',

@@ -22,7 +22,7 @@ const CustomButtons: React.FC<CustomButtonsProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#0286FF', // Default button color
+    backgroundColor: '#0286FF', 
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,

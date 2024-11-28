@@ -1,11 +1,13 @@
-import { View } from 'react-native';
-import { Slot } from 'expo-router';
+import { Stack } from "expo-router";
 
-export default function RootLayout() {
+const Layout = () => {
   return (
-    <View style={{ flex: 1 }}>
-      {/* Slot is required for nested routing to work correctly */}
-      <Slot />
-    </View>
+    <Stack>
+      <Stack.Screen name="welcome" options={{ headerShown: false }} />
+      <Stack.Screen name="sign-up" options={{ headerShown: false }} />
+      <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+    </Stack>
   );
-}
+};
+
+export default Layout;

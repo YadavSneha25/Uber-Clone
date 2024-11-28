@@ -5,7 +5,14 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
+import { ClerkProvider, ClerkLoaded } from '@clerk/clerk-expo'
+import { Slot } from 'expo-router'
+
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!
+
+
+
+
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -15,6 +22,11 @@ export default function RootLayout() {
     "Jakarta-ExtraLight": require("../assets/fonts/PlusJakartaSans-ExtraLight.ttf"),
     "Jakarta-Light": require("../assets/fonts/PlusJakartaSans-Light.ttf"),
   });
+  if (!publishableKey) {
+    throw new Error(
+      'Missing Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env',
+    )
+  }
 
   useEffect(() => {
     if (loaded) {
@@ -27,6 +39,8 @@ export default function RootLayout() {
   }
 
   return (
+    <ClerkProvider publishableKey={publishableKey}>
+      <ClerkLoaded>
     <ThemeProvider value={DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         {/* Define each screen explicitly */}
@@ -34,5 +48,8 @@ export default function RootLayout() {
         {/* Add any other screens here explicitly */}
       </Stack>
     </ThemeProvider>
+    </ClerkLoaded>
+    </ClerkProvider>
+
   );
 }

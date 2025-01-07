@@ -1,65 +1,88 @@
-import React, { useState } from 'react';
-import { Text, StyleSheet, ScrollView, View, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { images } from "@/constants"; // Ensure this is properly imported
-import InputField from "@/components/InputField"; // Ensure InputField component is defined
-import { icons } from "@/constants/index"; // Import the icons object
-import CustomButton from "@/components/CustomButtons"; // Import your CustomButton component or use a library button
-import { Link } from 'expo-router';
-import OAuth from "@/components/OAuth"
+import { useSignIn } from "@clerk/clerk-expo";
+import { Link, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
+import { Alert, Image, ScrollView, Text, View, StyleSheet } from "react-native";
 
-
+import CustomButton from "@/components/CustomButtons";
+import InputField from "@/components/InputField";
+import OAuth from "@/components/OAuth";
+import { icons, images } from "@/constants";
 
 const SignIn = () => {
+  const { signIn, setActive, isLoaded } = useSignIn();
+  const router=useRouter();
   const [form, setForm] = useState({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
 
-  const onSignInPress = async () => {
-    // Handle the sign-In logic here
-    console.log('Form Data:', form);
-  };
+  const onSignInPress = useCallback(async () => {
+    if (!isLoaded) return;
 
-  const handleInputChange = (field, value) => {
-    setForm((prevForm) => ({
-      ...prevForm,
-      [field]: value,
-    }));
-  };
+    try {
+      const signInAttempt = await signIn.create({
+        identifier: form.email,
+        password: form.password,
+      });
+
+      if (signInAttempt.status === "complete") {
+        await setActive({ session: signInAttempt.createdSessionId });
+        router.replace("/(root)/(tabs)/home");
+      } else {
+        // See https://clerk.com/docs/custom-flows/error-handling for more info on error handling
+        console.log(JSON.stringify(signInAttempt, null, 2));
+        Alert.alert("Error", "Log in failed. Please try again.");
+      }
+    } catch (err: any) {
+      console.log(JSON.stringify(err, null, 2));
+      Alert.alert("Error", err.errors[0].longMessage);
+    }
+  }, [isLoaded, form.email,form.password]);
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.innerContainer}>
-        <View style={styles.innerInnerContainer}>
+        <View style={styles.imageContainer}>
           <Image source={images.signUpCar} style={styles.image} />
-          <Text style={styles.headerText}>Welcome!</Text>
+          <Text style={styles.headerText}>Welcome 👋</Text>
         </View>
-        <View style={styles.inputContainer}>
+
+        <View style={styles.formContainer}>
           <InputField
             label="Email"
-            placeholder="Enter your email"
-            icon={icons.email} // Ensure `icons.email` is valid
+            placeholder="Enter email"
+            icon={icons.email}
+            textContentType="emailAddress"
             value={form.email}
-            onChangeText={(value) => handleInputChange('email', value)}
+            onChangeText={(value) => setForm({ ...form, email: value })}
           />
+
           <InputField
             label="Password"
-            placeholder="Enter your password"
-            icon={icons.lock} // Ensure `icons.lock` is valid
+            placeholder="Enter password"
+            icon={icons.lock}
+            secureTextEntry={true}
+            textContentType="password"
             value={form.password}
-            onChangeText={(value) => handleInputChange('password', value)}
-            secureTextEntry // Hides password input
+            onChangeText={(value) => setForm({ ...form, password: value })}
           />
-          <CustomButton title="Sign-In" onPress={onSignInPress} style={styles.onSignUp} />
-          {/* OAuth */}
+
+          <CustomButton
+            title="Sign In"
+            onPress={onSignInPress}
+            style={styles.signInButton}
+          />
+
           <OAuth />
-          <Link href="/sign-up" style={styles.signIn}>
-            <Text>Don't have an account!</Text>
-            <Text style={styles.login}>Sign-Up</Text>
+
+          <Link
+            href="/sign-up"
+            style={styles.signUpLink}
+          >
+            Don't have an account?{" "}
+            <Text style={styles.signUpText}>Sign Up</Text>
           </Link>
         </View>
-        {/*Verification Model*/}
       </View>
     </ScrollView>
   );
@@ -74,40 +97,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'white',
   },
-  image: {
+  imageContainer: {
+    position: 'relative',
     width: '100%',
     height: 250,
-    zIndex: 0,
   },
-  innerInnerContainer: {
-    position: 'relative',
+  image: {
+    zIndex: 0,
     width: '100%',
     height: 250,
   },
   headerText: {
     fontSize: 24,
     color: 'black',
-    fontFamily: 'Jakarta-SemiBold', // Ensure this font is loaded
+    fontWeight: '600', // Assuming JakartaSemiBold is a semi-bold font
     position: 'absolute',
     bottom: 5,
     left: 5,
   },
-  inputContainer: {
+  formContainer: {
     padding: 20,
   },
-  login: {
-    color: '#1D4ED8', // Example color for a "primary" text
-    fontWeight: 'bold',
-    marginTop: 8,
+  signInButton: {
+    marginTop: 24,
   },
-  signIn: {
-    alignItems: 'center',
-    color: '#6B7280', // Example neutral gray color
-    marginVertical: 10,
+  signUpLink: {
+    textAlign: 'center',
+    fontSize: 18,
+    color: '#B0B0B0',
+    marginTop: 40,
   },
-  onSignUp: {
-    marginTop: 6,
-  }
+  signUpText: {
+    color: '#3B82F6', // Tailwind's primary-500 color equivalent
+  },
 });
 
 export default SignIn;

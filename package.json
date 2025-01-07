@@ -1,5 +1,7 @@
 {
   "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "expo-secure-store": "^14.0.0",
     "react-native-swiper": "^1.6.0"
   }
 }

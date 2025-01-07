@@ -1,185 +1,176 @@
-import React, { useState } from 'react';
-import { Text, StyleSheet, ScrollView, View, Image, Alert } from 'react-native';
-import { useRouter } from 'expo-router'; // Import the useRouter hook
-import { images, icons } from "@/constants"; // Ensure these imports are correct
-import InputField from "@/components/InputField"; // Ensure InputField component is defined
-import CustomButton from "@/components/CustomButtons"; // Import your CustomButton component
-import OAuth from "@/components/OAuth";
 import { useSignUp } from "@clerk/clerk-expo";
-import ReactNativeModal from 'react-native-modal'; // Import ReactNativeModal
+import { Link, router } from "expo-router";
+import { useState } from "react";
+import { Alert, Image, ScrollView, Text, View, StyleSheet, Dimensions } from "react-native";
+import { ReactNativeModal } from "react-native-modal";
+
+import CustomButton from "@/components/CustomButtons";
+import InputField from "@/components/InputField";
+import OAuth from "@/components/OAuth";
+import { icons, images } from "@/constants";
+import { fetchAPI } from "@/lib/fetch";
+
+const { width, height } = Dimensions.get("window");
 
 const SignUp = () => {
   const { isLoaded, signUp, setActive } = useSignUp();
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    password: '',
-  });
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
   const [verification, setVerification] = useState({
     state: "default",
     error: "",
     code: "",
   });
 
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-
-  const router = useRouter(); // Use the router for navigation
-
   const onSignUpPress = async () => {
-    if (!isLoaded) {
-      return;
-    }
-
+    if (!isLoaded) return;
     try {
       await signUp.create({
         emailAddress: form.email,
         password: form.password,
       });
-
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-
-      setVerification((prevState) => ({
-        ...prevState,
-        state: 'pending',
-      }));
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      setVerification({
+        ...verification,
+        state: "pending",
+      });
     } catch (err: any) {
-      Alert.alert("Error",err.errors[0].longMessage);
+      console.log(JSON.stringify(err, null, 2));
+      Alert.alert("Error", err.errors[0].longMessage);
     }
   };
 
   const onPressVerify = async () => {
-    if (!isLoaded) {
-      return;
-    }
-
+    if (!isLoaded) return;
+  
     try {
       const completeSignUp = await signUp.attemptEmailAddressVerification({
         code: verification.code,
       });
+  
+      console.log("Complete SignUp Response:", completeSignUp);
+  
+      if (completeSignUp.status === "complete") {
+        //API database user
 
-      if (completeSignUp.status === 'complete') {
+        await fetchAPI("/(api)/user", {
+          method: "POST",
+          body: JSON.stringify({
+            name: form.name,
+            email: form.email,
+            clerkId: completeSignUp.createdUserId,
+          }),
+        });
+
+
+        // Set session and mark as verified
         await setActive({ session: completeSignUp.createdSessionId });
-        setVerification((prevState) => ({
-          ...prevState,
-          state: 'success',
-        }));
+        setVerification({ ...verification, state: "success" });
+  
+        // Redirect to home page
+        router.push(`/(root)/(tabs)/home`);
       } else {
-        setVerification((prevState) => ({
-          ...prevState,
-          error: 'Verification failed',
-          state: 'failed',
-        }));
+        setVerification({
+          ...verification,
+          error: "Verification failed. Please try again.",
+          state: "failed",
+        });
       }
     } catch (err: any) {
-      setVerification((prevState) => ({
-        ...prevState,
-        error: err.errors?.[0]?.longMessage || 'An error occurred',
-        state: 'failed',
-      }));
+      console.error("Error during verification:", err);
+  
+      // Handle any errors
+      setVerification({
+        ...verification,
+        error: err.message || "Verification failed. Please try again.",
+        state: "failed",
+      });
     }
   };
-
-  const handleInputChange = (field, value) => {
-    setForm((prevForm) => ({
-      ...prevForm,
-      [field]: value,
-    }));
-  };
+  
+  
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.innerContainer}>
-        <View style={styles.innerInnerContainer}>
-          <Image source={images.signUpCar} style={styles.image} />
-          <Text style={styles.headerText}>Create Your Account</Text>
-        </View>
-        <View style={styles.inputContainer}>
-          <InputField
-            label="Name"
-            placeholder="Enter your name"
-            icon={icons.person}
-            value={form.name}
-            onChangeText={(value) => handleInputChange('name', value)}
-          />
-          <InputField
-            label="Email"
-            placeholder="Enter your email"
-            icon={icons.email}
-            value={form.email}
-            onChangeText={(value) => handleInputChange('email', value)}
-          />
-          <InputField
-            label="Password"
-            placeholder="Enter your password"
-            icon={icons.lock}
-            value={form.password}
-            onChangeText={(value) => handleInputChange('password', value)}
-            secureTextEntry
-          />
-          <CustomButton title="Sign-up" onPress={onSignUpPress} style={styles.onSignUp} />
-          {/* OAuth */}
-          <OAuth />
-          <Text onPress={() => router.push('/sign-in')} style={styles.signIn}>
-            <Text>Already have an account? </Text>
-            <Text style={styles.login}>Log In</Text>
-          </Text>
-        </View>
-
-        {/* Verification Modal */}
-        <ReactNativeModal
-          isVisible={verification.state === "pending"}
-          onModalHide={() => {
-            if (verification.state === "success") {
-              setShowSuccessModal(true);
-            }
-          }}
-        >
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalHeaderText}>Verification</Text>
-            <Text style={styles.modalBodyText}>
-              We've sent a verification code to {form.email}.
-            </Text>
-            <InputField
-              label="Code"
-              icon={icons.lock}
-              placeholder="12345"
-              value={verification.code}
-              keyboardType="numeric"
-              onChangeText={(code) => setVerification({ ...verification, code })}
-            />
-            {verification.error && (
-              <Text style={styles.errorText}>
-                {verification.error}
-              </Text>
-            )}
-            <CustomButton
-              title="Verify Email"
-              onPress={onPressVerify}
-              style={styles.verifyButton}
-            />
-          </View>
-        </ReactNativeModal>
-
-        {/* Success Modal */}
-        <ReactNativeModal isVisible={showSuccessModal}>
-          <View style={styles.modalContainer}>
-            <Image source={images.check} style={styles.modalImage} />
-            <Text style={styles.modalText}>Verification Successful!</Text>
-            <Text style={styles.modalText1}>You have successfully verified your account.</Text>
-
-            <CustomButton
-  title="Browse Home"
-  style={styles.modalButton}
-  onPress={() => {
-    setShowSuccessModal(false); // Corrected syntax for setting the state
-    router.push("/(root)/(tabs)/home"); // Navigate to the specified route
-  }}
-/>
-
-          </View>
-        </ReactNativeModal>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.imageContainer}>
+        <Image source={images.signUpCar} style={styles.image} />
+        <Text style={styles.headerText}>Create Your Account</Text>
       </View>
+      <View style={styles.formContainer}>
+        <InputField
+          label="Name"
+          placeholder="Enter name"
+          icon={icons.person}
+          value={form.name}
+          onChangeText={(value) => setForm({ ...form, name: value })}
+        />
+        <InputField
+          label="Email"
+          placeholder="Enter email"
+          icon={icons.email}
+          textContentType="emailAddress"
+          value={form.email}
+          onChangeText={(value) => setForm({ ...form, email: value })}
+        />
+        <InputField
+          label="Password"
+          placeholder="Enter password"
+          icon={icons.lock}
+          secureTextEntry
+          textContentType="password"
+          value={form.password}
+          onChangeText={(value) => setForm({ ...form, password: value })}
+        />
+        <CustomButton title="Sign Up" onPress={onSignUpPress} style={styles.signUpButton} />
+        <OAuth />
+        <Link href="/sign-in" style={styles.link}>
+          Already have an account? <Text style={styles.linkText}>Log In</Text>
+        </Link>
+      </View>
+      <ReactNativeModal
+        isVisible={verification.state === "pending"}
+        onModalHide={() => {
+          if (verification.state === "success") {
+            setShowSuccessModal(true);
+          }
+        }}
+      >
+        <View style={styles.modalContainer}>
+          <Text style={styles.modalHeader}>Verification</Text>
+          <Text style={styles.modalBody}>
+            We've sent a verification code to {form.email}.
+          </Text>
+          <InputField
+            label="Code"
+            icon={icons.lock}
+            placeholder="12345"
+            value={verification.code}
+            keyboardType="numeric"
+            onChangeText={(code) => setVerification({ ...verification, code })}
+          />
+          {verification.error && <Text style={styles.errorText}>{verification.error}</Text>}
+          <CustomButton title="Verify Email" onPress={onPressVerify} style={styles.verifyButton} />
+        </View>
+      </ReactNativeModal>
+      <ReactNativeModal isVisible={showSuccessModal}>
+        <View style={styles.modalContainer}>
+          <Image source={images.check} style={styles.modalImage} />
+          <Text style={styles.modalSuccessText}>Verified</Text>
+          <Text style={styles.modalMessage}>
+            You have successfully verified your account.
+          </Text>
+          <CustomButton
+            title="Browse Home"
+            onPress={() => router.push(`/(root)/(tabs)/home`)}
+            style={styles.homeButton}
+          />
+        </View>
+      </ReactNativeModal>
     </ScrollView>
   );
 };
@@ -187,86 +178,86 @@ const SignUp = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: "white",
   },
-  innerContainer: {
-    flex: 1,
-    backgroundColor: 'white',
+  scrollContainer: {
+    flexGrow: 1,
+  },
+  imageContainer: {
+    width: "100%",
+    height: height * 0.35,
+    position: "relative",
   },
   image: {
-    width: '100%',
-    height: 250,
-    zIndex: 0,
-  },
-  innerInnerContainer: {
-    position: 'relative',
-    width: '100%',
-    height: 250,
+    width: "100%",
+    height: "100%",
   },
   headerText: {
+    position: "absolute",
+    bottom: 15,
+    left: 15,
     fontSize: 24,
-    color: 'black',
-    fontFamily: 'Jakarta-SemiBold',
-    position: 'absolute',
-    bottom: 5,
-    left: 5,
+    fontWeight: "600",
+    color: "black",
   },
-  inputContainer: {
+  formContainer: {
     padding: 20,
   },
-  login: {
-    color: '#1D4ED8',
-    fontWeight: 'bold',
-    marginTop: 8,
+  signUpButton: {
+    marginTop: 20,
   },
-  signIn: {
-    alignItems: 'center',
-    color: '#6B7280',
-    marginVertical: 10,
+  link: {
+    marginTop: 10,
+    textAlign: "center",
   },
-  onSignUp: {
-    marginTop: 6,
+  linkText: {
+    color: "#1D4ED8",
+    fontWeight: "bold",
   },
   modalContainer: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     padding: 20,
-    borderRadius: 10,
-    alignItems: 'center',
+    borderRadius: 15,
+    alignItems: "center",
     minHeight: 300,
+  },
+  modalHeader: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  modalBody: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  errorText: {
+    color: "red",
+    fontSize: 14,
+    marginTop: 5,
+  },
+  verifyButton: {
+    marginTop: 20,
+    backgroundColor: "#4CAF50",
   },
   modalImage: {
     width: 110,
     height: 110,
     marginBottom: 20,
   },
-  modalText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  modalSuccessText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
   },
-  modalText1: {
-    fontSize: 13,
-    fontWeight: 'light',
-  },
-  modalButton: {
+  modalMessage: {
+    fontSize: 16,
+    color: "#6B7280",
+    textAlign: "center",
     marginTop: 10,
   },
-  modalHeaderText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  modalBodyText: {
-    fontSize: 16,
-    marginBottom: 20,
-  },
-  errorText: {
-    color: 'red',
-    fontSize: 14,
-    marginTop: 5,
-  },
-  verifyButton: {
+  homeButton: {
     marginTop: 20,
-    backgroundColor: '#4CAF50', // Success green
   },
 });
 

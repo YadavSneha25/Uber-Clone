@@ -308,5 +308,7 @@ const styles = StyleSheet.create({
   signOutIcon: {
     width: 20,
     height: 20,
+
+    
   },
 });
